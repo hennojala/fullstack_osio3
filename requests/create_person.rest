@@ -1,0 +1,8 @@
+POST http://localhost:3001/api/persons
+Content-Type: application/json
+
+{
+    "name": "testinimi3",
+    "number": "010912390823"
+}
+//Lisättiin kyseinen henkilö testauksen merkeissä onnistuneesti.
