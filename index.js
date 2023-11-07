@@ -70,7 +70,7 @@ app.delete('/api/persons/:id', (request, response, next) => {
 
     Person.findByIdAndDelete(request.params.id)
         .then(deletedPerson => {
-            response.status(204).end(); // Poistettiin onnistuneesti, palauta "No Content" -vastaus
+            response.status(204).end()
         })
         .catch(error => next(error))
 });
