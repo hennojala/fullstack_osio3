@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "lint": "eslint .",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build:ui": "rm -rf build && cd ../fullstack/osa2/puhelinluettelo && npm run build && cp -r build ../fullstack_osio3",
     "deploy:full": "npm run build:ui && git add . && git commit -m uibuild && git push"
@@ -29,6 +30,7 @@
     "morgan": "^1.10.0"
   },
   "devDependencies": {
+    "eslint": "^8.53.0",
     "nodemon": "^3.0.1"
   }
 }

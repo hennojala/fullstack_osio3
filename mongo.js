@@ -1,8 +1,8 @@
 const mongoose = require('mongoose')
 
 if (process.argv.length < 3) {
-    console.log('give password as argument')
-    process.exit(1)
+  console.log('give password as argument')
+  process.exit(1)
 }
 
 const password = process.argv[2]
@@ -17,38 +17,38 @@ mongoose.connect(url)
 
 
 const personSchema = new mongoose.Schema({
-    name: String,
-    number: String,
-    id: Number
+  name: String,
+  number: String,
+  id: Number
 })
 
 const Person = mongoose.model('Person', personSchema)
 
 if (process.argv.length > 3) {
 
-    // ID:n generointi toiminnallisuus randomilla, kokonaisluku väliltä 5-1000
-    const generateId = () => {
-        return Math.floor(Math.random() * (1000 - 5 + 1)) + 5;
-    }
+  // ID:n generointi toiminnallisuus randomilla, kokonaisluku väliltä 5-1000
+  const generateId = () => {
+    return Math.floor(Math.random() * (1000 - 5 + 1)) + 5
+  }
 
-    const person = new Person({
-        name: nam,
-        number: num,
-        id: generateId()
-    })
+  const person = new Person({
+    name: nam,
+    number: num,
+    id: generateId()
+  })
 
-    person.save().then(result => {
-        console.log(`added ${nam} number ${num} to phonebook`)
-        mongoose.connection.close()
-    })
+  person.save().then(() => {
+    console.log(`added ${nam} number ${num} to phonebook`)
+    mongoose.connection.close()
+  })
 }
 else {
 
-    //Tulosta kaikki tietokannan henkilot konsoliin
-    Person
-        .find({})
-        .then(person => {
-            console.log(person)
-            mongoose.connection.close()
-        })
+  //Tulosta kaikki tietokannan henkilot konsoliin
+  Person
+    .find({})
+    .then(person => {
+      console.log(person)
+      mongoose.connection.close()
+    })
 }
