@@ -1,11 +1,15 @@
+require('dotenv').config()
 const express = require('express')
 const morgan = require('morgan')
 const cors = require('cors')
 const app = express()
+const Person = require('./models/person')
+const { default: mongoose } = require('mongoose')
 
+app.use(express.static('dist'))
 app.use(express.json())
 app.use(cors())
-app.use(express.static('dist'))
+
 
 // Määritä mukautettu token morganille näyttämään POST-pyynnön datan.
 morgan.token('postData', (req, res) => {
@@ -18,98 +22,120 @@ morgan.token('postData', (req, res) => {
 // Morganin konfiguraatio ja käyttöönotto
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :postData'));
 
-
-// Kovakoodattu data henkilöistä
-let persons = [
-    {
-        "name": "Arto Hellas Lovelace",
-        "number": "040-123456",
-        "id": 1
-    },
-    {
-        "name": "Ada Lovelace",
-        "number": "39-44-5323523",
-        "id": 2
-    },
-    {
-        "name": "Dan Abramov",
-        "number": "12-43-234345",
-        "id": 3
-    },
-    {
-        "name": "Mary Poppendieck",
-        "number": "39-23-6423122",
-        "id": 4
-    }
-]
-
 // Infotekstin näyttö
-app.get('/info', (req, res) => {
-    const numberOfPersons = persons.length;
-    const currentDate = new Date();
-    res.send(`<p>Phonebook has info for ${numberOfPersons} people</p> <p>${currentDate}</p>`);
+app.get('/info', (req, res, next) => {
+    Person.find({})
+        .then(persons => {
+            const personCount = persons.length;
+            const currentDate = new Date();
+            res.send(`<p>Phonebook has info for ${personCount} people</p> <p>${currentDate}</p>`);
+        })
+        .catch(error => next(error));
 });
 
+
 //Kaikkien henkilöiden haku
-app.get('/api/persons', (req, res) => {
-    res.json(persons)
-})
+app.get('/api/persons/', (req, res, next) => {
+    Person.find({})
+        .then(person => {
+            if (person) {
+                console.log(person);
+                res.json(person)
+            }
+            else {
+                res.status(404).end()
+            }
+        })
+        .catch(error => next(error));
+});
 
 // Toiminnallisuus hakea henkilö id:llä
-app.get('/api/persons/:id', (request, response) => {
+app.get('/api/persons/:id', (request, res, next) => {
+    const id = request.params.id;
 
-    const id = Number(request.params.id)
-    const person = persons.find(person => person.id === id)
-
-    if (person) { //Jos käyttäjä löytyy, palauta se
-        response.json(person)
-    } else {
-        response.status(404).end() // Muussa tapauksessa anna virheilmoitus
-    }
-})
+    Person.findById(id)
+        .then(person => {
+            if (person) {
+                console.log(person);
+                res.json(person);
+            } else {
+                res.status(404).end(); // Jos käyttäjää ei löydy, palauta 404 - Not Found
+            }
+        })
+        .catch(error => next(error));
+});
 
 // Poista käyttäjä
-app.delete('/api/persons/:id', (request, response) => {
-    const id = Number(request.params.id)
-    persons = persons.filter(person => person.id !== id)
+app.delete('/api/persons/:id', (request, response, next) => {
 
-    response.status(204).end() // Jos poistettavaa ei ole olemassa, virheilmoitus
-})
-
-// ID:n generointi toiminnallisuus randomilla, kokonaisluku väliltä 5-1000
-const generateId = () => {
-    return Math.floor(Math.random() * (1000 - 5 + 1)) + 5;
-}
+    Person.findByIdAndDelete(request.params.id)
+        .then(deletedPerson => {
+            response.status(204).end(); // Poistettiin onnistuneesti, palauta "No Content" -vastaus
+        })
+        .catch(error => next(error))
+});
 
 // Uuden käyttäjän vienti järjestelmään
-app.post('/api/persons', (request, response) => {
-    const body = request.body
+app.post('/api/persons', (request, response, next) => {
+    const body = request.body;
 
-    if (!body.name || !body.number) { // jos nimeä tai numeroa ei ole, virheilmoitus
-        return response.status(400).json({
-            error: 'name or number missing'
+    Person.findOne({ name: body.name })
+        .then(existingPerson => {
+            if (existingPerson) {
+                console.log("BackEnd: Person is already on notebook.")
+                return error => next(error);
+            }
+            else {
+                const person = new Person({
+                    name: body.name,
+                    number: body.number
+                });
+
+                person.save()
+                    .then(savedPerson => {
+                        response.json(savedPerson);
+                    })
+                    .catch(error => next(error));
+            }
         })
+});
+
+// Käyttäjän päivitys
+app.put('/api/persons/:id', (request, response, next) => {
+    const { name, number } = request.body
+
+    Person.findByIdAndUpdate(request.params.id, { name, number }, { new: true, runValidators: true, context: 'query' })
+        .then(updatedPerson => {
+            response.json(updatedPerson)
+        })
+        .catch(error => next(error))
+});
+
+const unknownEndpoint = (request, response) => {
+    response.status(404).send({ error: 'unknown endpoint' })
+};
+
+// olemattomien osoitteiden käsittely
+app.use(unknownEndpoint)
+
+const errorHandler = (error, request, response, next) => {
+    console.error(error.message)
+
+    if (error.name === 'CastError') {
+        return response.status(400).json({ error: 'malformatted id' })
+    } else if (error.name === 'ValidationError') {
+        return response.status(400).json({ error: error.message })
+    } else if (error.name === 'Internal Server Error') {
+        return response.status(500).json({ error: error.message })
     }
 
-    //Jos nimi on jo luettelossa, virheilmoitus
-    const duplicateName = persons.find(person => person.name === body.name);
-    if (duplicateName) {
-        return response.status(409).json({
-            error: 'Name must be unique'
-        });
-    }
+    next(error)
+}
 
-    const person = {
-        name: body.name,
-        number: body.number,
-        id: generateId(),
-    }
-    persons = persons.concat(person)
-    response.json(person)
-})
+app.use(errorHandler)
 
 // Serveriä ajava portti
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)
 })

@@ -1,2 +1,2 @@
-DELETE http://localhost:3001/api/persons/2
-//Testattiin poistaa id:llä 2 oleva henkilö onnistuneesti
+DELETE http://localhost:3001/api/persons/6547d4c9b6f84cc43c38b069
+//Testattiin poistaa id:llä 3 oleva henkilö onnistuneesti
